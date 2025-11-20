@@ -1,30 +1,76 @@
-const WalletService = require('../services/walletService');
+const walletService = require("../services/wallet/walletService");
 
-exports.createWallet = async (req, res) => {
-  try {
-    const { user_id, msisdn, balance } = req.body;
-    const wallet = await WalletService.createWallet({ user_id, msisdn, balance });
-    return res.status(201).json({ success: true, wallet });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
+const walletController = {
+  // -----------------------------
+  // CREATE WALLET
+  // -----------------------------
+  createWallet: async (req, res) => {
+    const walletData = req.body;
+    const result = await walletService.createWallet(walletData);
+    res.json(result);
+  },
+
+  // -----------------------------
+  // GET WALLET BY USER ID
+  // -----------------------------
+  getWallet: async (req, res) => {
+    const { user_id } = req.params;
+    const result = await walletService.getWalletByUser(user_id);
+    res.json(result);
+  },
+
+  // -----------------------------
+  // GET ALL WALLETS
+  // -----------------------------
+  getAllWallets: async (req, res) => {
+    const result = await walletService.getAllWallets();
+    res.json(result);
+  },
+
+  // -----------------------------
+  // GET BALANCE
+  // -----------------------------
+  getBalance: async (req, res) => {
+    const { walletId } = req.params;
+    const result = await walletService.getBalance(walletId);
+    res.json(result);
+  },
+
+  // -----------------------------
+  // DEBIT WALLET
+  // -----------------------------
+  debitWithFees: async (req, res) => {
+    const { walletId, amount, fees = 0, commission = 0 } = req.body;
+    const result = await walletService.debitWithFees(walletId, amount, fees, commission);
+    res.json(result);
+  },
+
+  // -----------------------------
+  // CREDIT WALLET
+  // -----------------------------
+  credit: async (req, res) => {
+    const { walletId, amount } = req.body;
+    const result = await walletService.credit(walletId, amount);
+    res.json(result);
+  },
+
+  // -----------------------------
+  // LOCK FUNDS
+  // -----------------------------
+  lockFunds: async (req, res) => {
+    const { walletId, amount } = req.body;
+    const result = await walletService.lockFunds(walletId, amount);
+    res.json(result);
+  },
+
+  // -----------------------------
+  // UNLOCK FUNDS
+  // -----------------------------
+  unlockFunds: async (req, res) => {
+    const { walletId, amount } = req.body;
+    const result = await walletService.unlockFunds(walletId, amount);
+    res.json(result);
+  },
 };
 
-exports.getWallet = async (req, res) => {
-  try {
-    const wallet = await WalletService.getWalletByUser(req.params.user_id);
-    if (!wallet) return res.status(404).json({ success: false, message: 'Wallet not found' });
-    return res.status(200).json({ success: true, wallet });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
-};
-
-exports.getAllWallets = async (req, res) => {
-  try {
-    const wallets = await WalletService.getAllWallets();
-    return res.status(200).json({ success: true, wallets });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
-};
+module.exports = walletController;

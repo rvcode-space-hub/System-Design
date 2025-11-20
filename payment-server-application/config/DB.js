@@ -1,8 +1,6 @@
 const { Sequelize, DataTypes } = require('sequelize');
-const dotenv = require('dotenv');
-dotenv.config();
+require('dotenv').config();
 
-// Create Sequelize instance
 const sequelize = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
@@ -15,20 +13,23 @@ const sequelize = new Sequelize(
   }
 );
 
-// ✅ Import models (make sure filenames match exactly)
-const itn_wallets = require('../module/itn_wallet')(sequelize, DataTypes);
-const itn_transactions = require('../module/itn_transactions')(sequelize, DataTypes);
-const its_product_profiles = require('../module/its_product_profiles')(sequelize, DataTypes);
-const its_service_types = require('../module/its_service_types')(sequelize, DataTypes);
-const itn_channel_users = require('../module/itn_channel_users')(sequelize, DataTypes); // 🔹 fixed file name
+// Load Models
+const itn_wallets = require('../models/itn_wallets')(sequelize, DataTypes);
+const itn_transactions = require('../models/itn_transactions')(sequelize, DataTypes);
+const its_product_profiles = require('../models/its_product_profiles')(sequelize, DataTypes);
+const its_service_types = require('../models/its_service_types')(sequelize, DataTypes);
+const itn_channel_users = require('../models/itn_channel_users')(sequelize, DataTypes);
 
+// Export as SINGLE OBJECT
 module.exports = {
-  sequelize,
-  itn_wallets,
-  itn_transactions,
-  its_product_profiles,
-  its_service_types,
-  itn_channel_users,
+  sequelize,               // <--- important!
+  models: {
+    itn_wallets,
+    itn_transactions,
+    its_product_profiles,
+    its_service_types,
+    itn_channel_users,
+  }
 };
 
-console.log('✅ Models loaded:', Object.keys(module.exports));
+console.log("✅ Models loaded:", Object.keys(module.exports.models));

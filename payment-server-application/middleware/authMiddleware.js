@@ -1,39 +1,50 @@
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 
-const authenticate = (req, resp, next) => {
-  const authHeader = req.headers.authorization;
-
-  if(!authHeader){
-    return resp.status(401).json({ message: 'Authorization header missing' });
-  }
-
-  const token = authHeader.split(' ')[1];
-
-  if(!token){
-    return resp.status(401).json({ message: 'Token missing' });
-  }
-
+const authenticate = (req, res, next) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    console.log("Decoded JWT:", decoded);
+    let token = req.headers.authorization;
 
-    req.user = {
-          user_id: decoded.userId,
-    } 
-
-     if (!req.user.user_id) {
-      return resp.status(401).json({
+    if (!token) {
+      return res.status(401).json({
         success: false,
-        message: 'User ID missing in token',
+        message: "Authorization header missing",
       });
     }
 
+    // Expected format → "Bearer token"
+    if (token.startsWith("Bearer ")) {
+      token = token.split(" ")[1];
+    }
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Token missing",
+      });
+    }
+
+    // Verify JWT
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (!decoded || !decoded.user_id) {
+      return res.status(401).json({
+        success: false,
+        message: "User ID missing in token",
+      });
+    }
+
+    // Attach user info to request
+    req.user = { user_id: decoded.user_id };
+
     next();
+
   } catch (err) {
-    return resp.status(401).json({ message: 'Invalid token' });
+    console.error("JWT Verification Error:", err.message);
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired token",
+    });
   }
-  
-}
+};
 
 module.exports = authenticate;

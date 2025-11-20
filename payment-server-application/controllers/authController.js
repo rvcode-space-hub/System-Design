@@ -1,93 +1,64 @@
-const {itn_channel_users} = require('../config/DB'); 
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid'); 
+// userController.js
+const userService = require("../services/user/userService");
+const { response, errorResponse } = require("../core/utils/response");
+const { generateToken } = require("../core/utils/token");
 
-
-const registerUser = async (req, resp) => {
-  const { user_name, password } = req.body;
-
+/**
+ * 🟢 Register User
+ */
+exports.registerUser = async (req, res, next) => {
   try {
-    if (!user_name || !password) {
-      return resp.status(400).json({ error: 'Username and password are required' });
-    }
+    const payload = req.body;
 
-    
-    const existingUser = await itn_channel_users.findOne({ where: { user_name } });
-    if (existingUser) {
-      return resp.status(400).json({ error: 'Username already exists' });
-    }
+    const user = await userService.register(payload);
 
- 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Remove sensitive info
+    const { password, ...userData } = user;
 
-    
-    const newUser = await itn_channel_users.create({
-      user_id: uuidv4(), 
-      user_name,
-      password: hashedPassword,
-      status: 'active'
-    });
-
-    resp.status(201).json({
-      message: '✅ User registered successfully',
-      user: {
-        id: newUser.user_id,
-        username: newUser.user_name,
-        status: newUser.status
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Registration Error:', error);
-    resp.status(500).json({ error: 'Registration failed' });
+    return response(res, userData, "User registered successfully");
+  } catch (err) {
+    next(err);
   }
 };
 
-
-
-const loginUser = async (req, resp) => {
-  const { user_name, password } = req.body;
-
+/**
+ * 🟢 Login User (email / msisdn / username)
+ */
+exports.loginUser = async (req, res, next) => {
   try {
-    if (!user_name || !password) {
-      return resp.status(400).json({ error: 'Username and password are required' });
-    }
+    const payload = req.body;
 
+    const user = await userService.login(payload); // should return user object
 
-    const user = await itn_channel_users.findOne({ where: { user_name } });
-    if (!user) {
-      return resp.status(400).json({ error: 'Invalid credentials' });
-    }
+    // Remove password before returning
+    const { password, ...userData } = user;
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return resp.status(400).json({ error: 'Invalid credentials' });
-    }
+    // Generate JWT
+    const token = generateToken(user.user_id);
 
-    // 🎟️ Generate JWT Token
-    const token = jwt.sign(
-      { userId: user.user_id },
-      process.env.JWT_SECRET,
-      { expiresIn: '12h' }
-    );
-
-    // ✅ Correct response
-    resp.json({
-      message: '✅ Login successful',
-      token,
-      user: {
-        id: user.user_id,
-        username: user.user_name,
-        status: user.status
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Login Error:', error);
-    resp.status(500).json({ error: 'Login failed' });
+    return response(res, { user: userData, token }, "Login successful");
+  } catch (err) {
+    next(err);
   }
 };
 
+/**
+ * 🟢 Update User Details
+ * Uses JWT-authenticated user_id from req.user
+ */
+exports.updateUser = async (req, res, next) => {
+  try {
+    // Use authenticated user_id
+    const user_id = req.user.user_id;
+    const updateData = req.body;
 
-module.exports = { registerUser, loginUser };
+    const updatedUser = await userService.updateUser(user_id, updateData);
+
+    // Remove sensitive info
+    const { password, ...userData } = updatedUser;
+
+    return response(res, userData, "User updated successfully");
+  } catch (err) {
+    next(err);
+  }
+};
